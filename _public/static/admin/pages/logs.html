@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grok2API - 调用日志</title>
+  <link rel="icon" href="/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-mono/style.css" rel="stylesheet">
+  <link href="/static/common/css/common.css?v=1.6.2" rel="stylesheet">
+  <link href="/static/admin/css/logs.css?v=1.0.0" rel="stylesheet">
+  <link href="/static/common/css/toast.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen flex flex-col" style="background-color: var(--bg);">
+
+  <div id="app-header"></div>
+
+  <main class="space-y-6 flex-1 container mx-auto max-w-5xl px-6 py-8 fade-in">
+    <div class="space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-2xl font-semibold tracking-tight">调用日志</h2>
+          <p class="text-[var(--accents-4)] mt-1 text-sm">查看 API 接口调用记录。</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="auto-refresh-indicator" class="text-xs text-[var(--accents-4)] flex items-center gap-1">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            自动刷新
+          </div>
+          <button onclick="handleClearLogs()" class="geist-button-outline gap-2 text-sm">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>清空</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="h-px bg-[var(--border)] my-6"></div>
+
+      <!-- 统计卡片 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="stat-card">
+          <div class="stat-label">总请求</div>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">成功</div>
+          <div class="stat-value text-green-600" id="stat-success">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">客户端错误</div>
+          <div class="stat-value text-orange-500" id="stat-client-err">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">服务端错误</div>
+          <div class="stat-value text-red-600" id="stat-server-err">0</div>
+        </div>
+      </div>
+
+      <!-- 日志表格 -->
+      <div class="rounded-lg overflow-hidden bg-white overflow-x-auto">
+        <div class="log-pagination-bar">
+          <div class="log-pagination-left">
+            <button id="btn-prev" type="button" class="pagination-icon-btn" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <div id="page-info" class="pagination-info">-</div>
+            <button id="btn-next" type="button" class="pagination-icon-btn" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+          <div class="log-pagination-right">
+            <select id="page-size-select" class="pagination-size-select">
+              <option value="20">20 / 页</option>
+              <option value="50">50 / 页</option>
+              <option value="100">100 / 页</option>
+            </select>
+          </div>
+        </div>
+        <table class="geist-table min-w-[700px]">
+          <thead>
+            <tr>
+              <th class="w-44 text-left">时间</th>
+              <th class="w-16 text-center">方法</th>
+              <th class="text-left">路径</th>
+              <th class="w-40 text-left">Model</th>
+              <th class="w-20 text-center">状态</th>
+              <th class="w-24 text-right">耗时</th>
+              <th class="w-32 text-left">IP</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body">
+            <tr>
+              <td colspan="7" class="table-empty">加载中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+  <div id="app-footer"></div>
+
+  <script src="/static/i18n/i18n.js"></script>
+  <script src="/static/common/js/admin-auth.js?v=1.6.2"></script>
+  <script src="/static/common/js/header.js?v=1.6.2"></script>
+  <script src="/static/common/js/footer.js?v=1.6.2"></script>
+  <script src="/static/common/js/toast.js"></script>
+  <script src="/static/admin/js/logs.js?v=1.0.0"></script>
+</body>
+
+</html>
