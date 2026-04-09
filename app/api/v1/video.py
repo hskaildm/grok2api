@@ -2,6 +2,7 @@
 Videos API route (OpenAI-compatible create endpoint).
 """
 
+import asyncio
 import base64
 import re
 import time
@@ -15,6 +16,12 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.core.exceptions import UpstreamException, ValidationException
+from app.core.logger import logger
+from app.core.video_task import (
+    create_video_task,
+    expire_video_task,
+    get_video_task,
+)
 from app.services.grok.services.model import ModelService
 from app.services.grok.services.video import VideoService
 from app.services.grok.services.video_extend import VideoExtendService
@@ -378,6 +385,106 @@ def _build_create_response(
     }
 
 
+async def _run_video_task(
+    task_id: str,
+    *,
+    model: str,
+    prompt: str,
+    size: str,
+    seconds: int,
+    quality: str,
+    aspect_ratio: str,
+    resolution: str,
+    content: List[Dict[str, Any]],
+) -> None:
+    """Background coroutine that runs video generation and updates the task."""
+    task = get_video_task(task_id)
+    if task is None:
+        return
+
+    task.status = "running"
+
+    try:
+        # Use stream=True so we can capture progress updates
+        stream_gen = await VideoService.completions(
+            model=model,
+            messages=[{"role": "user", "content": content}],
+            stream=True,
+            reasoning_effort=None,
+            aspect_ratio=aspect_ratio,
+            video_length=seconds,
+            resolution=resolution,
+            preset="custom",
+        )
+
+        # Consume the SSE stream, extract progress and final video URL
+        last_content = ""
+        async for chunk_str in stream_gen:
+            if not isinstance(chunk_str, str):
+                continue
+
+            # Parse SSE lines: "data: {...}\n\n"
+            for line in chunk_str.strip().split("\n"):
+                line = line.strip()
+                if not line.startswith("data: "):
+                    continue
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    continue
+
+                try:
+                    data = orjson.loads(data_str)
+                except (orjson.JSONDecodeError, ValueError):
+                    continue
+
+                choices = data.get("choices")
+                if not isinstance(choices, list) or not choices:
+                    continue
+
+                delta = choices[0].get("delta", {})
+                if not isinstance(delta, dict):
+                    continue
+
+                delta_content = delta.get("content", "")
+                if not delta_content:
+                    continue
+
+                last_content += delta_content
+
+                # Extract progress like "[round=1/2] progress=45%"
+                progress_match = re.search(
+                    r"\[round=\d+/\d+\]\s*progress=\d+%", delta_content
+                )
+                if progress_match:
+                    task.progress = progress_match.group(0)
+
+        # Extract video URL from accumulated content
+        video_url = _extract_video_url(last_content)
+        if not video_url:
+            task.status = "failed"
+            task.error = "Video generation failed: missing video URL"
+            logger.warning(f"Video task {task_id} failed: missing video URL")
+        else:
+            task.status = "completed"
+            task.result = _build_create_response(
+                model=model,
+                prompt=prompt,
+                size=size,
+                seconds=seconds,
+                quality=quality,
+                url=video_url,
+            )
+            logger.info(f"Video task {task_id} completed: {video_url}")
+
+    except Exception as e:
+        task.status = "failed"
+        task.error = str(e)
+        logger.warning(f"Video task {task_id} failed: {e}")
+
+    # Schedule auto-cleanup after 1 hour
+    asyncio.create_task(expire_video_task(task_id, delay=3600))
+
+
 async def _create_video_from_payload(
     payload: BaseModel,
     references: List[str],
@@ -407,37 +514,58 @@ async def _create_video_from_payload(
     for ref in references:
         content.append({"type": "image_url", "image_url": {"url": ref}})
 
-    result = await VideoService.completions(
+    # Create async task and return immediately
+    task = create_video_task(
         model=model,
-        messages=[{"role": "user", "content": content}],
-        stream=False,
-        reasoning_effort=None,
-        aspect_ratio=aspect_ratio,
-        video_length=seconds,
-        resolution=resolution,
-        preset="custom",
+        prompt=prompt,
+        size=size,
+        seconds=seconds,
+        quality=quality,
     )
 
-    choices = result.get("choices") if isinstance(result, dict) else None
-    if not isinstance(choices, list) or not choices:
-        raise UpstreamException("Video generation failed: empty result")
-
-    msg = choices[0].get("message", {}) if isinstance(choices[0], dict) else {}
-    rendered = msg.get("content", "") if isinstance(msg, dict) else ""
-    video_url = _extract_video_url(rendered)
-    if not video_url:
-        raise UpstreamException("Video generation failed: missing video URL")
-
-    return JSONResponse(
-        content=_build_create_response(
+    asyncio.create_task(
+        _run_video_task(
+            task.id,
             model=model,
             prompt=prompt,
             size=size,
             seconds=seconds,
             quality=quality,
-            url=video_url,
+            aspect_ratio=aspect_ratio,
+            resolution=resolution,
+            content=content,
         )
     )
+
+    return JSONResponse(
+        status_code=202,
+        content={
+            "task_id": task.id,
+            "status": task.status,
+        },
+    )
+
+
+@router.get("/videos/{task_id}")
+async def get_video_task_status(task_id: str):
+    """
+    Poll video generation task status.
+
+    Returns task progress while running, full result when completed.
+    """
+    task = get_video_task(task_id)
+    if task is None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": {
+                    "message": f"Video task '{task_id}' not found or expired",
+                    "type": "not_found",
+                    "code": "task_not_found",
+                }
+            },
+        )
+    return JSONResponse(content=task.snapshot())
 
 
 @router.post(

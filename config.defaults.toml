@@ -33,7 +33,7 @@ filter_tags = ["xaiartifact","xai:tool_usage_card","grok:render"]
 # ==================== 代理配置 ====================
 [proxy]
 # 基础代理地址（代理到 Grok 官网）
-base_proxy_url = ""
+base_proxy_url = "socks5://warp:1080"
 # 资源代理地址（代理静态资源如图片/视频）
 asset_proxy_url = ""
 # 完整 CF Cookies（自动刷新写入）
@@ -41,7 +41,7 @@ cf_cookies = ""
 # 跳过代理 SSL 证书验证（代理使用自签名证书时启用）
 skip_proxy_ssl_verify = false
 # 是否启用 CF 自动刷新
-enabled = false
+enabled = true
 # FlareSolverr 服务地址（通过环境变量 FLARESOLVERR_URL 自动设置）
 flaresolverr_url = ""
 # 刷新间隔（秒）
@@ -79,9 +79,9 @@ retry_budget = 60.0
 # 是否启用 Token 自动刷新
 auto_refresh = true
 # 普通 Token 刷新间隔（小时）
-refresh_interval_hours = 8
+refresh_interval_hours = 0.25
 # Super Token 刷新间隔（小时）
-super_refresh_interval_hours = 2
+super_refresh_interval_hours = 0.25
 # Token 连续失败阈值
 fail_threshold = 5
 # Token 变更保存延迟（毫秒）
