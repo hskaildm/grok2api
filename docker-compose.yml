@@ -47,6 +47,13 @@ services:
       - WARP_SLEEP=2
     cap_add:
       - NET_ADMIN
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
 
   # FlareSolverr CF 自动刷新
   flaresolverr:
