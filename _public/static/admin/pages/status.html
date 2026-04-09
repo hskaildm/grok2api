@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>炎灵API - 服务状态</title>
+  <link rel="icon" href="https://yl.man-tui.com/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-mono/style.css" rel="stylesheet">
+  <link href="/static/common/css/common.css?v=1.6.2" rel="stylesheet">
+  <link href="/static/admin/css/status.css?v=1.0.0" rel="stylesheet">
+  <link href="/static/common/css/toast.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen flex flex-col" style="background-color: var(--bg);">
+  <div id="toast-container" class="toast-container"></div>
+  <div id="app-header"></div>
+
+  <main class="space-y-8 flex-1 container mx-auto max-w-5xl px-6 py-8 fade-in">
+
+    <!-- Page header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h2 class="text-2xl font-semibold tracking-tight">服务状态</h2>
+        <p class="text-[var(--accents-4)] mt-1 text-sm">运行时系统信息与 API 调用统计</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs text-[var(--accents-4)] flex items-center gap-1.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+          自动刷新（10s）
+        </div>
+        <button onclick="loadStatus()" class="geist-button-outline gap-2 text-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          <span>立即刷新</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="h-px bg-[var(--border)]"></div>
+
+    <!-- Section 1: 基础系统信息 -->
+    <section>
+      <h3 class="status-section-title">基础系统信息</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div class="stat-card">
+          <div class="stat-label">运行时长</div>
+          <div class="stat-value font-mono" id="s-uptime">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">启动时间</div>
+          <div class="stat-value text-sm font-mono" id="s-started-at">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Python 版本</div>
+          <div class="stat-value font-mono" id="s-python">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">操作系统</div>
+          <div class="stat-value text-sm" id="s-platform">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: 资源占用 -->
+    <section>
+      <h3 class="status-section-title">资源占用</h3>
+
+      <!-- psutil unavailable notice -->
+      <div id="psutil-notice" class="hidden mt-3 text-xs text-[var(--accents-4)] flex items-center gap-1.5">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        CPU/内存信息不可用（需安装 psutil 依赖）
+      </div>
+
+      <div id="resource-section" class="hidden">
+        <!-- CPU -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <div class="stat-card">
+            <div class="stat-label">CPU 占用</div>
+            <div class="stat-value" id="s-cpu">—</div>
+            <div class="resource-bar-wrap"><div class="resource-bar green" id="cpu-bar" style="width:0%"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">CPU 核心数</div>
+            <div class="stat-value" id="s-cpu-cores">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">进程内存</div>
+            <div class="stat-value" id="s-mem-proc">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">系统内存占用</div>
+            <div class="stat-value" id="s-mem-pct">—</div>
+            <div class="resource-bar-wrap"><div class="resource-bar green" id="mem-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <!-- Memory + Disk -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <div class="stat-card">
+            <div class="stat-label">系统总内存</div>
+            <div class="stat-value" id="s-mem-total">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">可用内存</div>
+            <div class="stat-value" id="s-mem-avail">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">磁盘占用</div>
+            <div class="stat-value" id="s-disk-pct">—</div>
+            <div class="resource-bar-wrap"><div class="resource-bar green" id="disk-bar" style="width:0%"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">磁盘剩余</div>
+            <div class="stat-value" id="s-disk-free">—</div>
+          </div>
+        </div>
+
+        <!-- Disk detail + Network -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <div class="stat-card">
+            <div class="stat-label">磁盘总容量</div>
+            <div class="stat-value" id="s-disk-total">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">磁盘已用</div>
+            <div class="stat-value" id="s-disk-used">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">网络发送</div>
+            <div class="stat-value" id="s-net-sent">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">网络接收</div>
+            <div class="stat-value" id="s-net-recv">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Token 状态统计 -->
+    <section>
+      <h3 class="status-section-title">Token 状态统计</h3>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div class="stat-card">
+          <div class="stat-label">Token 总数</div>
+          <div class="stat-value" id="t-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">活跃</div>
+          <div class="stat-value text-green-600" id="t-active">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">冷却中</div>
+          <div class="stat-value text-orange-500" id="t-cooling">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">已过期</div>
+          <div class="stat-value text-red-600" id="t-expired">—</div>
+        </div>
+      </div>
+
+      <!-- Per-pool table -->
+      <div class="mt-4">
+        <table class="status-table">
+          <thead>
+            <tr>
+              <th class="text-left">池名称</th>
+              <th class="text-right">总数</th>
+              <th class="text-right">活跃</th>
+              <th class="text-right">冷却</th>
+              <th class="text-right">过期</th>
+              <th class="text-right">禁用</th>
+              <th class="text-right">总配额</th>
+              <th class="text-right">均配额</th>
+              <th class="text-right">总消耗</th>
+            </tr>
+          </thead>
+          <tbody id="token-pools-body">
+            <tr><td colspan="9" class="table-empty">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 4: API 调用统计 -->
+    <section>
+      <h3 class="status-section-title">API 调用统计
+        <span class="status-section-note">（最近 500 次请求）</span>
+      </h3>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+        <div class="stat-card">
+          <div class="stat-label">总调用数</div>
+          <div class="stat-value" id="c-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">成功率</div>
+          <div class="stat-value text-green-600" id="c-rate">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">平均耗时</div>
+          <div class="stat-value font-mono" id="c-avg-dur">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">成功</div>
+          <div class="stat-value text-green-600" id="c-success">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">客户端错误 (4xx)</div>
+          <div class="stat-value text-orange-500" id="c-4xx">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">服务端错误 (5xx)</div>
+          <div class="stat-value text-red-600" id="c-5xx">—</div>
+        </div>
+      </div>
+
+      <!-- Per-model table -->
+      <div class="mt-4">
+        <table class="status-table">
+          <thead>
+            <tr>
+              <th class="text-left">模型</th>
+              <th class="text-right">调用次数</th>
+              <th class="text-right">成功</th>
+              <th class="text-right">错误</th>
+              <th class="text-right">平均耗时</th>
+            </tr>
+          </thead>
+          <tbody id="model-stats-body">
+            <tr><td colspan="5" class="table-empty">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="app-footer"></div>
+
+  <script src="/static/i18n/i18n.js"></script>
+  <script src="/static/common/js/admin-auth.js?v=1.6.2"></script>
+  <script src="/static/common/js/header.js?v=1.6.2"></script>
+  <script src="/static/common/js/footer.js?v=1.6.2"></script>
+  <script src="/static/common/js/toast.js"></script>
+  <script src="/static/admin/js/status.js?v=1.0.0"></script>
+</body>
+</html>

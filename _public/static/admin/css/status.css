@@ -1,0 +1,120 @@
+/* Status page styles */
+
+/* Section heading */
+.status-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accents-7);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-section-note {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--accents-4);
+}
+
+/* Shared table */
+.status-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 1px solid var(--accents-1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.status-table th {
+  padding: 0 16px;
+  border-bottom: 1px solid var(--accents-1);
+  color: var(--accents-5);
+  font-weight: 500;
+  height: 40px;
+  background: #fff;
+  text-align: center;
+}
+
+.status-table th.text-left  { text-align: left; }
+.status-table th.text-right { text-align: right; }
+
+.status-table td {
+  padding: 8px 16px;
+  border-bottom: 1px solid #f5f5f5;
+  background: #fff;
+  vertical-align: middle;
+  height: 44px;
+  color: var(--accents-6);
+  text-align: center;
+  transition: background 0.15s;
+  font-size: 12px;
+}
+
+.status-table td.text-left  { text-align: left; }
+.status-table td.text-right { text-align: right; }
+.status-table tr:last-child td { border-bottom: none; }
+.status-table tr:hover td { background: #fafafa; }
+
+/* Pool / model name */
+.pool-name,
+.model-name {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accents-7);
+}
+
+.model-name {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mono number cells */
+.mono-num {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+}
+
+/* Resource progress bar */
+.resource-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: var(--accents-1);
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.resource-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.resource-bar.green  { background: #059669; }
+.resource-bar.orange { background: #d97706; }
+.resource-bar.red    { background: #dc2626; }
+
+/* Stat card value override */
+.stat-card .stat-value.text-sm {
+  font-size: 14px;
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+/* Responsive */
+@media (max-width: 720px) {
+  .status-table { font-size: 11px; }
+  .status-table td, .status-table th { padding: 6px 10px; }
+}

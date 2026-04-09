@@ -69,8 +69,10 @@ class ResponseLoggerMiddleware(BaseHTTPMiddleware):
         return status_code >= 400 or duration_ms >= slow_ms
 
     @staticmethod
-    def _should_collect(path: str) -> bool:
-        """判断是否需要收集到调用日志。"""
+    def _should_collect(path: str, method: str) -> bool:
+        """判断是否需要收集到调用日志（仅 POST/PUT，GET 轮询不记录）。"""
+        if method not in ("POST", "PUT"):
+            return False
         return any(path.startswith(p) for p in _API_LOG_PREFIXES)
 
     @staticmethod
@@ -115,12 +117,13 @@ class ResponseLoggerMiddleware(BaseHTTPMiddleware):
             "/admin/cache",
             "/admin/token",
             "/admin/logs",
+            "/admin/status",
         ):
             return await call_next(request)
 
         # 预读 body 用于提取 model（仅对需要收集的路径）
         model = ""
-        should_collect = self._should_collect(path)
+        should_collect = self._should_collect(path, request.method)
         if should_collect and request.method in ("POST", "PUT"):
             try:
                 body_bytes = await request.body()

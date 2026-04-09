@@ -54,6 +54,10 @@ setup_logging(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    import time as _time
+    app.state.start_time = _time.monotonic()
+    app.state.start_wall_time = _time.time()
+
     # 1. 注册服务默认配置
     from app.core.config import register_defaults
     from app.services.grok.defaults import get_grok_defaults
