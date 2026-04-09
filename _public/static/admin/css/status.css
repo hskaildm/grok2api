@@ -101,6 +101,32 @@
 .resource-bar.orange { background: #d97706; }
 .resource-bar.red    { background: #dc2626; }
 
+/* Resource detail grid inside stat-card */
+.res-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+}
+
+.res-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.res-detail-label {
+  font-size: 12px;
+  color: var(--accents-4);
+}
+
+.res-detail-val {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accents-7);
+}
+
 /* Stat card value override */
 .stat-card .stat-value.text-sm {
   font-size: 14px;

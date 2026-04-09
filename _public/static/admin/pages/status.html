@@ -80,66 +80,48 @@
       </div>
 
       <div id="resource-section" class="hidden">
-        <!-- CPU -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <!-- CPU -->
           <div class="stat-card">
-            <div class="stat-label">CPU 占用</div>
-            <div class="stat-value" id="s-cpu">—</div>
-            <div class="resource-bar-wrap"><div class="resource-bar green" id="cpu-bar" style="width:0%"></div></div>
+            <div class="stat-label" style="margin-bottom:8px">CPU</div>
+            <div class="resource-bar-wrap" style="margin-top:0;margin-bottom:10px"><div class="resource-bar green" id="cpu-bar" style="width:0%"></div></div>
+            <div class="res-detail-grid">
+              <div class="res-detail-item"><span class="res-detail-label">占用率</span><span class="res-detail-val" id="s-cpu">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">核心数</span><span class="res-detail-val" id="s-cpu-cores">—</span></div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">CPU 核心数</div>
-            <div class="stat-value" id="s-cpu-cores">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">进程内存</div>
-            <div class="stat-value" id="s-mem-proc">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">系统内存占用</div>
-            <div class="stat-value" id="s-mem-pct">—</div>
-            <div class="resource-bar-wrap"><div class="resource-bar green" id="mem-bar" style="width:0%"></div></div>
-          </div>
-        </div>
 
-        <!-- Memory + Disk -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <!-- Memory -->
           <div class="stat-card">
-            <div class="stat-label">系统总内存</div>
-            <div class="stat-value" id="s-mem-total">—</div>
+            <div class="stat-label" style="margin-bottom:8px">内存</div>
+            <div class="resource-bar-wrap" style="margin-top:0;margin-bottom:10px"><div class="resource-bar green" id="mem-bar" style="width:0%"></div></div>
+            <div class="res-detail-grid">
+              <div class="res-detail-item"><span class="res-detail-label">系统占用</span><span class="res-detail-val" id="s-mem-pct">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">进程占用</span><span class="res-detail-val" id="s-mem-proc">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">可用</span><span class="res-detail-val" id="s-mem-avail">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">总量</span><span class="res-detail-val" id="s-mem-total">—</span></div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">可用内存</div>
-            <div class="stat-value" id="s-mem-avail">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">磁盘占用</div>
-            <div class="stat-value" id="s-disk-pct">—</div>
-            <div class="resource-bar-wrap"><div class="resource-bar green" id="disk-bar" style="width:0%"></div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">磁盘剩余</div>
-            <div class="stat-value" id="s-disk-free">—</div>
-          </div>
-        </div>
 
-        <!-- Disk detail + Network -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <!-- Disk -->
           <div class="stat-card">
-            <div class="stat-label">磁盘总容量</div>
-            <div class="stat-value" id="s-disk-total">—</div>
+            <div class="stat-label" style="margin-bottom:8px">磁盘</div>
+            <div class="resource-bar-wrap" style="margin-top:0;margin-bottom:10px"><div class="resource-bar green" id="disk-bar" style="width:0%"></div></div>
+            <div class="res-detail-grid">
+              <div class="res-detail-item"><span class="res-detail-label">占用率</span><span class="res-detail-val" id="s-disk-pct">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">已用</span><span class="res-detail-val" id="s-disk-used">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">剩余</span><span class="res-detail-val" id="s-disk-free">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">总量</span><span class="res-detail-val" id="s-disk-total">—</span></div>
+            </div>
           </div>
+
+          <!-- Network -->
           <div class="stat-card">
-            <div class="stat-label">磁盘已用</div>
-            <div class="stat-value" id="s-disk-used">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">网络发送</div>
-            <div class="stat-value" id="s-net-sent">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">网络接收</div>
-            <div class="stat-value" id="s-net-recv">—</div>
+            <div class="stat-label" style="margin-bottom:8px">网络流量</div>
+            <div class="res-detail-grid" style="margin-top:18px">
+              <div class="res-detail-item"><span class="res-detail-label">发送</span><span class="res-detail-val" id="s-net-sent">—</span></div>
+              <div class="res-detail-item"><span class="res-detail-label">接收</span><span class="res-detail-val" id="s-net-recv">—</span></div>
+            </div>
           </div>
         </div>
       </div>
