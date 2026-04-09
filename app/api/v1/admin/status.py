@@ -118,6 +118,7 @@ async def get_status(request: Request):
         "disabled": 0,
         "total_quota": 0,
         "total_consumed": 0,
+        "total_today_consumed": 0,
     }
     pool_stats = {}
     for pool_name, stats in raw_stats.items():

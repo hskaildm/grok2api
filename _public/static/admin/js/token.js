@@ -164,7 +164,9 @@ function processTokens(data) {
             last_fail_at: t.last_fail_at,
             last_fail_reason: t.last_fail_reason,
             last_sync_at: t.last_sync_at,
-            last_asset_clear_at: t.last_asset_clear_at
+            last_asset_clear_at: t.last_asset_clear_at,
+            today_consumed: t.today_consumed || 0,
+            today_date: t.today_date || null
           };
         flatTokens.push({ ...tObj, pool: pool, _selected: false });
       });
@@ -372,6 +374,19 @@ function renderTable() {
     tr.appendChild(tdType);
     tr.appendChild(tdStatus);
     tr.appendChild(tdQuota);
+
+    // 今日消耗列
+    const tdToday = document.createElement('td');
+    tdToday.className = 'text-center font-mono text-xs';
+    tdToday.innerText = item.today_consumed || 0;
+    tr.appendChild(tdToday);
+
+    // 总消耗列
+    const tdConsumed = document.createElement('td');
+    tdConsumed.className = 'text-center font-mono text-xs';
+    tdConsumed.innerText = item.consumed || 0;
+    tr.appendChild(tdConsumed);
+
     tr.appendChild(tdNote);
     tr.appendChild(tdActions);
 
@@ -737,6 +752,7 @@ async function syncToServer() {
       status: t.status,
       quota: t.quota,
       consumed: t.consumed || 0,
+      today_consumed: t.today_consumed || 0,
       note: t.note,
       fail_count: t.fail_count,
       use_count: t.use_count || 0,
@@ -748,6 +764,7 @@ async function syncToServer() {
     if (typeof t.last_sync_at === 'number') payload.last_sync_at = t.last_sync_at;
     if (typeof t.last_asset_clear_at === 'number') payload.last_asset_clear_at = t.last_asset_clear_at;
     if (typeof t.last_fail_reason === 'string' && t.last_fail_reason) payload.last_fail_reason = t.last_fail_reason;
+    if (typeof t.today_date === 'string' && t.today_date) payload.today_date = t.today_date;
     newTokens[t.pool].push(payload);
   });
 

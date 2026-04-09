@@ -11,7 +11,10 @@ Token 数据模型
 from enum import Enum
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 北京时间 UTC+8
+_BJT = timezone(timedelta(hours=8))
 
 
 # 默认配额
@@ -54,6 +57,10 @@ class TokenInfo(BaseModel):
     # 消耗记录（本地累加，不依赖 API 返回值）
     # 仅在 consumed_mode_enabled=true 时使用
     consumed: int = 0
+
+    # 今日消耗（北京时间，跨天自动重置）
+    today_consumed: int = 0
+    today_date: Optional[str] = None  # "YYYY-MM-DD" 北京时间
 
     # 统计
     created_at: int = Field(
@@ -130,6 +137,14 @@ class TokenInfo(BaseModel):
         elif allow_from_expired and self.status == TokenStatus.EXPIRED:
             self.status = TokenStatus.ACTIVE
 
+    def _track_today(self, cost: int):
+        """累加今日消耗，跨天（北京时间）自动重置。"""
+        today = datetime.now(_BJT).strftime("%Y-%m-%d")
+        if self.today_date != today:
+            self.today_consumed = 0
+            self.today_date = today
+        self.today_consumed += cost
+
     def consume(self, effort: EffortType = EffortType.LOW) -> int:
         """
         消耗配额（默认：扣减 quota）
@@ -147,6 +162,7 @@ class TokenInfo(BaseModel):
 
         self.last_used_at = int(datetime.now().timestamp() * 1000)
         self.consumed += cost  # 无论是否开启消耗模式，都记录消耗
+        self._track_today(cost)  # 记录今日消耗
         self.use_count += actual_cost
         self.quota = max(0, self.quota - actual_cost)
 
@@ -173,6 +189,7 @@ class TokenInfo(BaseModel):
         cost = EFFORT_COST[effort]
 
         self.consumed += cost  # 累加消耗记录
+        self._track_today(cost)  # 记录今日消耗
         self.last_used_at = int(datetime.now().timestamp() * 1000)
         self.use_count += 1
 
@@ -220,6 +237,8 @@ class TokenInfo(BaseModel):
         self.last_fail_reason = None
         # 重置消耗记录
         self.consumed = 0
+        self.today_consumed = 0
+        self.today_date = None
 
     def record_fail(
         self,
@@ -295,6 +314,7 @@ class TokenPoolStats(BaseModel):
     avg_quota: float = 0.0
     total_consumed: int = 0
     avg_consumed: float = 0.0
+    total_today_consumed: int = 0
 
 
 __all__ = [

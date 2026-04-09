@@ -128,6 +128,7 @@ class TokenPool:
         for token in self._tokens.values():
             stats.total_quota += token.quota
             stats.total_consumed += token.consumed
+            stats.total_today_consumed += token.today_consumed
 
             if token.status == TokenStatus.ACTIVE:
                 stats.active += 1
