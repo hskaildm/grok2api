@@ -45,6 +45,16 @@ def clear_call_logs() -> int:
         return count
 
 
+def update_call_log(trace_id: str, updates: dict):
+    """按 trace_id 更新日志条目（用于异步任务回写进度/结果）。"""
+    with _log_lock:
+        for entry in _call_logs:
+            if entry.get("trace_id") == trace_id:
+                entry.update(updates)
+                return True
+    return False
+
+
 class ResponseLoggerMiddleware(BaseHTTPMiddleware):
     """
     请求日志/响应追踪中间件

@@ -67,23 +67,73 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function taskProgressHtml(log) {
+  const status = log.task_status;
+  if (!status) return '<span class="log-badge log-badge-gray">—</span>';
+  if (status === 'completed') return '<span class="log-badge log-badge-green">completed</span>';
+  if (status === 'failed') return '<span class="log-badge log-badge-red">failed</span>';
+  if (status === 'running') {
+    const progress = log.task_progress || '';
+    const pctMatch = progress.match(/progress=(\d+)%/);
+    const pct = pctMatch ? pctMatch[1] + '%' : '...';
+    return `<span class="log-badge log-badge-blue">${escapeHtml(pct)}</span>`;
+  }
+  return `<span class="log-badge log-badge-gray">${escapeHtml(status)}</span>`;
+}
+
+function renderDetailRow(log) {
+  const parts = [];
+  if (log.task_id) parts.push(`<b>Task ID:</b> ${escapeHtml(log.task_id)}`);
+  if (log.task_status) parts.push(`<b>状态:</b> ${escapeHtml(log.task_status)}`);
+  if (log.task_progress) parts.push(`<b>进度:</b> ${escapeHtml(log.task_progress)}`);
+  if (log.task_error) parts.push(`<b>错误:</b> <span style="color:#dc2626">${escapeHtml(log.task_error)}</span>`);
+  if (log.task_result) {
+    const r = log.task_result;
+    if (r.url) parts.push(`<b>视频链接:</b> <a href="${escapeHtml(r.url)}" target="_blank" style="color:#2563eb;text-decoration:underline;word-break:break-all">${escapeHtml(r.url)}</a>`);
+    if (r.prompt) parts.push(`<b>提示词:</b> ${escapeHtml(r.prompt)}`);
+    if (r.model) parts.push(`<b>模型:</b> ${escapeHtml(r.model)}`);
+    if (r.size) parts.push(`<b>尺寸:</b> ${escapeHtml(r.size)}`);
+    if (r.seconds) parts.push(`<b>时长:</b> ${escapeHtml(r.seconds)}s`);
+    if (r.quality) parts.push(`<b>质量:</b> ${escapeHtml(r.quality)}`);
+  }
+  if (log.trace_id) parts.push(`<b>Trace ID:</b> <span style="opacity:0.5">${escapeHtml(log.trace_id)}</span>`);
+  if (log.error) parts.push(`<b>异常:</b> <span style="color:#dc2626">${escapeHtml(log.error)}</span>`);
+  return parts.join('<br>');
+}
+
 function renderTable(data) {
   const tbody = document.getElementById('logs-body');
   if (!data || !data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">暂无调用记录</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">暂无调用记录</td></tr>';
     return;
   }
-  tbody.innerHTML = data.map(log => `
-    <tr>
+  tbody.innerHTML = data.map((log, idx) => {
+    const hasDetail = log.task_id || log.error || log.trace_id;
+    const cursorStyle = hasDetail ? 'cursor:pointer' : '';
+    const row = `
+    <tr class="log-row" style="${cursorStyle}" onclick="${hasDetail ? `toggleDetail('detail-${idx}')` : ''}">
       <td class="text-left"><span class="log-time">${escapeHtml(log.time)}</span></td>
       <td>${methodBadge(log.method)}</td>
       <td class="text-left"><span class="log-path" title="${escapeHtml(log.path)}">${escapeHtml(log.path)}</span></td>
       <td class="text-left"><span class="log-model" title="${escapeHtml(log.model)}">${escapeHtml(log.model) || '-'}</span></td>
       <td>${statusBadge(log.status)}</td>
+      <td class="text-center">${taskProgressHtml(log)}</td>
       <td class="text-right">${durationText(log.duration_ms)}</td>
       <td class="text-left"><span class="log-ip">${escapeHtml(log.ip) || '-'}</span></td>
-    </tr>
-  `).join('');
+    </tr>`;
+    const detail = hasDetail ? `
+    <tr id="detail-${idx}" class="log-detail-row" style="display:none">
+      <td colspan="8" class="log-detail-cell">${renderDetailRow(log)}</td>
+    </tr>` : '';
+    return row + detail;
+  }).join('');
+}
+
+function toggleDetail(id) {
+  const row = document.getElementById(id);
+  if (row) {
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+  }
 }
 
 function renderStats(data) {

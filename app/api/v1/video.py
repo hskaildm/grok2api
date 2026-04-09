@@ -17,6 +17,7 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.core.exceptions import UpstreamException, ValidationException
 from app.core.logger import logger
+from app.core.response_middleware import update_call_log
 from app.core.video_task import (
     create_video_task,
     expire_video_task,
@@ -396,6 +397,7 @@ async def _run_video_task(
     aspect_ratio: str,
     resolution: str,
     content: List[Dict[str, Any]],
+    trace_id: str = "",
 ) -> None:
     """Background coroutine that runs video generation and updates the task."""
     task = get_video_task(task_id)
@@ -464,6 +466,11 @@ async def _run_video_task(
             task.status = "failed"
             task.error = "Video generation failed: missing video URL"
             logger.warning(f"Video task {task_id} failed: missing video URL")
+            if trace_id:
+                update_call_log(trace_id, {
+                    "task_status": "failed",
+                    "task_error": "missing video URL",
+                })
         else:
             task.status = "completed"
             task.result = _build_create_response(
@@ -475,11 +482,30 @@ async def _run_video_task(
                 url=video_url,
             )
             logger.info(f"Video task {task_id} completed: {video_url}")
+            # 回写日志：完成
+            if trace_id:
+                update_call_log(trace_id, {
+                    "task_status": "completed",
+                    "task_progress": "100%",
+                    "task_result": {
+                        "url": video_url,
+                        "model": model,
+                        "prompt": prompt,
+                        "size": size,
+                        "seconds": str(seconds),
+                        "quality": quality,
+                    },
+                })
 
     except Exception as e:
         task.status = "failed"
         task.error = str(e)
         logger.warning(f"Video task {task_id} failed: {e}")
+        if trace_id:
+            update_call_log(trace_id, {
+                "task_status": "failed",
+                "task_error": str(e),
+            })
 
     # Schedule auto-cleanup after 1 hour
     asyncio.create_task(expire_video_task(task_id, delay=3600))
@@ -490,6 +516,7 @@ async def _create_video_from_payload(
     references: List[str],
     *,
     require_extension: bool = False,
+    request: Request = None,
 ) -> JSONResponse:
     prompt = (payload.prompt or "").strip()
     if not prompt:
@@ -523,6 +550,16 @@ async def _create_video_from_payload(
         quality=quality,
     )
 
+    # 获取 trace_id 并把 task_id 写入调用日志
+    trace_id = ""
+    if request is not None:
+        trace_id = getattr(request.state, "trace_id", "")
+        if trace_id:
+            update_call_log(trace_id, {
+                "task_id": task.id,
+                "task_status": "pending",
+            })
+
     asyncio.create_task(
         _run_video_task(
             task.id,
@@ -534,6 +571,7 @@ async def _create_video_from_payload(
             aspect_ratio=aspect_ratio,
             resolution=resolution,
             content=content,
+            trace_id=trace_id,
         )
     )
 
@@ -609,7 +647,7 @@ async def create_video(request: Request):
             _raise_validation_error(exc)
         references = await _build_references_for_json(payload)
         return await _create_video_from_payload(
-            payload, references, require_extension=False
+            payload, references, require_extension=False, request=request
         )
 
     form = await request.form()
@@ -624,9 +662,8 @@ async def create_video(request: Request):
         input_reference=form.get("input_reference"),
     )
     return await _create_video_from_payload(
-        payload, references, require_extension=False
+        payload, references, require_extension=False, request=request
     )
-
 
 @router.post(
     "/video/extend",
