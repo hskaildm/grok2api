@@ -538,7 +538,7 @@ async def _create_video_from_payload(
     )
 
     return JSONResponse(
-        status_code=202,
+        status_code=200,
         content={
             "task_id": task.id,
             "status": task.status,
