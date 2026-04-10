@@ -72,11 +72,10 @@ function taskProgressHtml(log) {
   if (!status) return '<span class="log-badge log-badge-gray">—</span>';
   if (status === 'completed') return '<span class="log-badge log-badge-green">completed</span>';
   if (status === 'failed') return '<span class="log-badge log-badge-red">failed</span>';
-  if (status === 'running') {
-    const progress = log.task_progress || '';
-    const pctMatch = progress.match(/progress=(\d+)%/);
-    const pct = pctMatch ? pctMatch[1] + '%' : '...';
-    return `<span class="log-badge log-badge-blue">${escapeHtml(pct)}</span>`;
+  if (status === 'in_progress') {
+    const pct = (log.task_progress != null) ? `${log.task_progress}%` : '...';
+    const detail = log.task_progress_detail ? ` ${escapeHtml(log.task_progress_detail)}` : '';
+    return `<span class="log-badge log-badge-blue">${pct}${detail}</span>`;
   }
   return `<span class="log-badge log-badge-gray">${escapeHtml(status)}</span>`;
 }
@@ -85,7 +84,8 @@ function renderDetailRow(log) {
   const parts = [];
   if (log.task_id) parts.push(`<b>Task ID:</b> ${escapeHtml(log.task_id)}`);
   if (log.task_status) parts.push(`<b>状态:</b> ${escapeHtml(log.task_status)}`);
-  if (log.task_progress) parts.push(`<b>进度:</b> ${escapeHtml(log.task_progress)}`);
+  if (log.task_progress != null) parts.push(`<b>进度:</b> ${log.task_progress}%`);
+  if (log.task_progress_detail) parts.push(`<b>轮次:</b> ${escapeHtml(log.task_progress_detail)}`);
   if (log.task_error) parts.push(`<b>错误:</b> <span style="color:#dc2626">${escapeHtml(log.task_error)}</span>`);
   if (log.task_result) {
     const r = log.task_result;

@@ -6,7 +6,6 @@ import asyncio
 import base64
 import re
 import time
-import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
@@ -361,31 +360,6 @@ def _multipart_create_schema(default_seconds: int) -> Dict[str, Any]:
     }
 
 
-def _build_create_response(
-    *,
-    model: str,
-    prompt: str,
-    size: str,
-    seconds: int,
-    quality: str,
-    url: str,
-) -> Dict[str, Any]:
-    ts = int(time.time())
-    return {
-        "id": f"video_{uuid.uuid4().hex[:24]}",
-        "object": "video",
-        "created_at": ts,
-        "completed_at": ts,
-        "status": "completed",
-        "model": model,
-        "prompt": prompt,
-        "size": size,
-        "seconds": str(seconds),
-        "quality": quality,
-        "url": url,
-    }
-
-
 async def _run_video_task(
     task_id: str,
     *,
@@ -404,7 +378,9 @@ async def _run_video_task(
     if task is None:
         return
 
-    task.status = "running"
+    task.status = "in_progress"
+    if trace_id:
+        update_call_log(trace_id, {"task_status": "in_progress"})
 
     try:
         # Use stream=True so we can capture progress updates
@@ -455,10 +431,24 @@ async def _run_video_task(
 
                 # Extract progress like "[round=1/2] progress=45%"
                 progress_match = re.search(
-                    r"\[round=\d+/\d+\]\s*progress=\d+%", delta_content
+                    r"\[round=(\d+)/(\d+)\]\s*progress=(\d+)%", delta_content
                 )
                 if progress_match:
-                    task.progress = progress_match.group(0)
+                    cur = int(progress_match.group(1))
+                    total = int(progress_match.group(2))
+                    pct = int(progress_match.group(3))
+                    # 总进度 = 已完成轮 × 每轮权重 + 当前轮进度 × 每轮权重
+                    per_round = 100 / total
+                    total_progress = min(99, int((cur - 1) * per_round + pct * per_round / 100))
+                    task.progress = total_progress
+                    task.progress_detail = f"round {cur}/{total}"
+                    # 同步回写日志，让管理面板能实时看到进度
+                    if trace_id:
+                        update_call_log(trace_id, {
+                            "task_status": "in_progress",
+                            "task_progress": total_progress,
+                            "task_progress_detail": task.progress_detail,
+                        })
 
         # Extract video URL from accumulated content
         video_url = _extract_video_url(last_content)
@@ -473,20 +463,13 @@ async def _run_video_task(
                 })
         else:
             task.status = "completed"
-            task.result = _build_create_response(
-                model=model,
-                prompt=prompt,
-                size=size,
-                seconds=seconds,
-                quality=quality,
-                url=video_url,
-            )
+            task.progress = 100
+            task.video_url = video_url
             logger.info(f"Video task {task_id} completed: {video_url}")
-            # 回写日志：完成
             if trace_id:
                 update_call_log(trace_id, {
                     "task_status": "completed",
-                    "task_progress": "100%",
+                    "task_progress": 100,
                     "task_result": {
                         "url": video_url,
                         "model": model,
@@ -573,10 +556,7 @@ async def _create_video_from_payload(
 
     return JSONResponse(
         status_code=200,
-        content={
-            "task_id": task.id,
-            "status": task.status,
-        },
+        content=task.snapshot(),
     )
 
 

@@ -23,7 +23,7 @@ class VideoTask:
     """A single async video generation task."""
 
     id: str
-    status: str  # "pending" | "running" | "completed" | "failed"
+    status: str  # "pending" | "in_progress" | "completed" | "failed"
     created_at: float
 
     # Request params (for display when polling)
@@ -34,10 +34,11 @@ class VideoTask:
     quality: str = "standard"
 
     # Progress (updated during generation)
-    progress: str = ""
+    progress: int = 0           # 总进度 0-100（整数）
+    progress_detail: str = ""   # round 详情，如 "round 1/2"
 
     # Result (set on completion)
-    result: Optional[Dict[str, Any]] = None
+    video_url: str = ""         # 完成时的视频链接
 
     # Error (set on failure)
     error: Optional[str] = None
@@ -47,9 +48,25 @@ class VideoTask:
 
     def snapshot(self) -> Dict[str, Any]:
         """Return a JSON-serializable snapshot for the polling endpoint."""
-        data: Dict[str, Any] = {
-            "task_id": self.id,
+        return {
+            "id": self.id,
+            "object": "video.generation",
             "status": self.status,
+            "progress": self.progress,
+            "progress_detail": self.progress_detail,
+            "video_url": self.video_url,
+            "image_url": "",
+            "error": self.error,
+            "output": [{"url": self.video_url}] if self.status == "completed" and self.video_url else [],
+            "result": {
+                "url": self.video_url,
+                "model": self.model,
+                "prompt": self.prompt,
+                "size": self.size,
+                "seconds": self.seconds,
+                "quality": self.quality,
+            } if self.status == "completed" and self.video_url else None,
+            "content_violation": False,
             "created_at": int(self.created_at),
             "model": self.model,
             "prompt": self.prompt,
@@ -57,17 +74,6 @@ class VideoTask:
             "seconds": self.seconds,
             "quality": self.quality,
         }
-
-        if self.progress:
-            data["progress"] = self.progress
-
-        if self.status == "completed" and self.result is not None:
-            data["result"] = self.result
-
-        if self.status == "failed" and self.error:
-            data["error"] = self.error
-
-        return data
 
 
 # ---------------------------------------------------------------------------
