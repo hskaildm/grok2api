@@ -159,11 +159,6 @@ class ResponseLoggerMiddleware(BaseHTTPMiddleware):
                     "ip": self._get_client_ip(request),
                     "trace_id": trace_id,
                 }
-                # 如果路由处理函数设置了 task_id（如视频任务），写入日志
-                task_id = getattr(request.state, "task_id", None)
-                if task_id:
-                    entry["task_id"] = task_id
-                    entry["task_status"] = "pending"
                 with _log_lock:
                     _call_logs.append(entry)
 

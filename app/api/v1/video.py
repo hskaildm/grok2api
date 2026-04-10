@@ -533,14 +533,20 @@ async def _create_video_from_payload(
         quality=quality,
     )
 
-    # 获取 trace_id，把 task_id 存入 request.state 供中间件读取
+    # 获取 trace_id
     trace_id = ""
     if request is not None:
         trace_id = getattr(request.state, "trace_id", "")
-        request.state.task_id = task.id
 
-    asyncio.create_task(
-        _run_video_task(
+    async def _patch_log_then_run():
+        """等中间件把日志 entry 写入后，再补写 task_id/task_status，然后启动任务。"""
+        await asyncio.sleep(0)  # 让出事件循环，确保中间件已写入日志
+        if trace_id:
+            update_call_log(trace_id, {
+                "task_id": task.id,
+                "task_status": "pending",
+            })
+        await _run_video_task(
             task.id,
             model=model,
             prompt=prompt,
@@ -552,7 +558,8 @@ async def _create_video_from_payload(
             content=content,
             trace_id=trace_id,
         )
-    )
+
+    asyncio.create_task(_patch_log_then_run())
 
     return JSONResponse(
         status_code=200,
